@@ -1,50 +1,53 @@
 # RideShare · Java 7
 
 ## Rasti im
-GitHub: suelabytyqi-hue  
-Kodi: P7-799  
-Skenari i zgjedhur: Rasti 2 · Pa vende  
-ID i udhëtimit në skenarin e provës: 2  
-Të dhënat fiktive të rastit: Ferizaj; ora fillestare 09:05; 2 vende; kufiri i provës 0 vende.
+GitHub: [suelabytyqi-hue/rideshare-mobile](https://github.com/suelabytyqi-hue/rideshare-mobile)
+
+Kodi: P7-799
+
+Skenari: Rasti 2 · Pa vende
+
+ID i udhëtimit: 2
+
+Të dhënat e rastit: Ferizaj; ora fillestare 09:05; 2 vende; kufiri i provës 0 vende.
 
 ## Parashikimi
-Kur udhëtimi ka 0 vende, lista duhet ta shënojë si “Pa vende” dhe detajet nuk duhet të lejojnë kërkesë. Edhe nëse faqja është e vjetër, POST-i duhet ta kontrollojë përsëri gjendjen në server dhe të kthejë gabim kur nuk ka vende.
+Kur udhëtimi ka 0 vende, lista duhet ta shënojë si “Pa vende” ose ta fshehë. Detajet nuk duhet të lejojnë kërkesë; POST-i duhet ta kontrollojë përsëri gjendjen në server dhe ta refuzojë kërkesën.
 
-## Dy problemet para korrigjimit
-Këto u identifikuan duke lexuar kodin para ndryshimit; nuk pretendohet se u vëzhguan në një provë runtime:
-1. Butoni e kalonte kërkesën drejtpërdrejt në simulimin “Në pritje”, pa kontrolluar përsëri numrin e vendeve në server.
-2. Nuk kishte endpoint POST për kontrollin e rezervimit, prandaj nuk ekzistonte kontroll serveror për një faqe të vjetër ose një kërkesë të dërguar drejtpërdrejt.
+## Problemet para korrigjimit
+1. Kur udhëtimi kishte 0 vende, ndërfaqja e detajeve e paraqiste si “Kërkesa u refuzua” dhe “Simulim: E refuzuar”, megjithëse udhëtari nuk kishte dërguar kërkesë.
+2. Për udhëtimet me vende, butoni e kalonte gjendjen vetëm lokalisht në “Në pritje”. Nuk kishte kontroll serveror të vendeve në momentin e kërkesës; një faqe e vjetër nuk mund të verifikonte disponueshmërinë aktuale.
 
 ## Korrigjimi
 Skedarët: `components/TripDetails.tsx` dhe `app/api/udhetimet/[id]/rezervim/route.ts`.
 
-Butoni tani dërgon POST te `/api/udhetimet/{id}/rezervim`. Serveri e lexon udhëtimin nga Neon dhe kthen 404 kur nuk ekziston, 409 kur nuk ka vende dhe 503 kur databaza nuk mund të lexohet. Vetëm pas kontrollit të suksesshëm ndërfaqja vazhdon me simulimin “Në pritje”. Kur udhëtimi ka 0 vende, lista dhe detajet vazhdojnë ta shfaqin si të padisponueshëm dhe butoni nuk shfaqet.
+Detajet tani tregojnë “Nuk ka vende të lira” dhe nuk paraqesin butonin kur udhëtimi është i mbushur. Butoni i kërkesës dërgon POST te `/api/udhetimet/{id}/rezervim`; serveri e lexon gjendjen aktuale nga Neon, kthen HTTP 409 kur nuk ka vende, 404 kur udhëtimi nuk gjendet dhe 503 kur databaza nuk mund të lexohet. Vetëm pas kontrollit të suksesshëm ndërfaqja kalon në simulimin “Në pritje”.
 
-Ky endpoint kontrollon disponueshmërinë, por nuk ruan rezervim dhe nuk ul numrin e vendeve. Kërkesa mbetet simulim, si në javët e mëparshme.
+Kjo ende nuk ruan rezervim dhe nuk ul numrin e vendeve. Kërkesa mbetet simulim.
 
-## Versionet
-Para: nuk ka lidhje commit-i të disponueshme.  
-Pas: nuk ka lidhje commit-i të disponueshme.  
-Shënim: kjo dosje nuk ka metadata Git dhe komanda `git` nuk është e instaluar në ambient; nuk u krijuan commit-e.
+## Versionet në GitHub
+Para · parashikimi: [6c2296e — Java 7: ruaj parashikimin P7-799](https://github.com/suelabytyqi-hue/rideshare-mobile/commit/6c2296e)
+
+Pas · korrigjimi i kodit: [d88efc6 — Java 7: kontrollo vendet para simulimit](https://github.com/suelabytyqi-hue/rideshare-mobile/commit/d88efc6c643d7c7774514321fc36284f05d601a2)
 
 ## Provat
-### Prova 1 · Kontrolli automatik i kodit
-- Hapat: Ekzekutova `npm run lint`, `npm run build` dhe kontrollova diagnostikat e dy skedarëve të ndryshuar.
-- Pritshmëria: Pa gabime lint ose TypeScript.
-- Vëzhgimi: Lint-i dhe build-i prodhimor përfunduan me sukses; diagnostikat e skedarëve të ndryshuar nuk raportuan gabime.
+### Prova 1 · Kontrolli automatik
+- Hapat: Ekzekutova `npm run lint` dhe `npm run build` në kopjen e repository-t.
+- Pritshmëria: Kontrolli i lint-it dhe build-i prodhimor përfundojnë pa gabime.
+- Vëzhgimi: Të dy komandat përfunduan me sukses. Diagnostikat për skedarët e ndryshuar nuk raportuan gabime.
 
-### Prova 2 · Udhëtimi me 0 vende
-- Hapat: Në databazën ekzistuese, udhëtimi ID 3 ishte pa vende. Hapa `/`, `/udhetimi/3` dhe dërgova POST te `/api/udhetimet/3/rezervim`.
-- Pritshmëria: Lista/detajet tregojnë se nuk ka vende; POST-i kthen HTTP 409 dhe nuk kalon kërkesën në pritje.
-- Vëzhgimi: Lista shfaqi “Pa vende”, detajet shfaqën “Nuk ka vende të lira” dhe butoni mungoi. POST-i u përgjigj HTTP 409 me “Nuk ka vende të lira për këtë udhëtim.” ID 2 në databazën ekzistuese kishte vende, prandaj nuk e ndryshova atë; prova e saktë me ID 2 të vendosur në 0 nuk u krye.
+### Prova 2 · ID 2 me zero vende
+- Hapat: ID 2 kishte 1 vend. E vendosa përkohësisht në 0 në Neon, hapa listën dhe detajet e udhëtimit dhe dërgova POST te `/api/udhetimet/2/rezervim`.
+- Pritshmëria: Lista shfaq “Pa vende”; detajet shfaqin mungesën e vendeve pa buton kërkese; POST-i kthen gabim.
+- Vëzhgimi: Lista shfaqi “Pa vende”; detajet shfaqën “Nuk ka vende të lira” dhe nuk kishin buton kërkese; POST-i ktheu HTTP 409. Pas provës, ID 2 u rikthye në vlerën fillestare, 1 vend.
 
-### Prova 3 · Udhëtim me vende, identifikues i panjohur dhe gabim databaze
-- Hapat: Dërgova POST te `/api/udhetimet/2/rezervim` dhe te `/api/udhetimet/not-found/rezervim`.
-- Pritshmëria: Me vende, simulimi vazhdon; ID e panjohur kthen HTTP 404; dështimi i databazës kthen HTTP 503.
-- Vëzhgimi: ID 2 u përgjigj HTTP 200 me `{"available":true,"simulation":true}`; ID e panjohur u përgjigj HTTP 404. Rasti i dështimit të databazës me HTTP 503 dhe prova në telefon nuk u provuan.
+### Prova 3 · Rikthimi dhe identifikuesi i panjohur
+- Hapat: Pasi riktheva ID 2 në 1 vend, dërgova POST për ID 2 dhe për ID-në `not-found`.
+- Pritshmëria: ID 2 vazhdon si simulim; identifikuesi i panjohur refuzohet.
+- Vëzhgimi: ID 2 ktheu HTTP 200 me përgjigje simulimi; ID `not-found` ktheu HTTP 404. Rasti kur databaza dështon (HTTP 503) nuk u provua.
 
 ## Ndryshimi i ri
-Kontrolli i kapacitetit nuk mbështetet më vetëm te të dhënat e vjetra të faqes: çdo kërkesë e simulimit verifikohet edhe në server. Kjo nuk e kthen simulimin në rezervim real.
+Disponueshmëria kontrollohet në server në momentin e kërkesës, jo vetëm në gjendjen që shfaq faqja. Të dhënat e Neon u rikthyen pas provës; nuk u ruajt rezervim.
 
 ## Ndihma nga AI
-Përdora GitHub Copilot për të kontrolluar kodin ekzistues, për të shtuar kontrollin POST serveror dhe për të përditësuar raportin. Verifikova lint-in dhe diagnostikat e skedarëve të ndryshuar. Nuk ndryshova të dhënat e Neon; testimi manual me llogarinë reale dhe telefoni mbeten për t’u kryer.
+Përdora GitHub Copilot për të kontrolluar sjelljen ekzistuese, për të shtuar kontrollin POST serveror dhe për të plotësuar raportin. Ekzekutova lint/build, provova rastin me ID 2 në 0 vende dhe kontrollova që numri i vendeve u rikthye në vlerën fillestare. Prova e HTTP 503 dhe prova në telefon nuk u kryen.
