@@ -26,6 +26,43 @@ function PendingClock() {
 
 export default function TripDetails({ trip }: { trip: Trip }) {
   const [requestStatus, setRequestStatus] = useState<"not-requested" | "pending" | "confirmed" | "rejected">("not-requested");
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [requesting, setRequesting] = useState(false);
+
+  async function requestSeat() {
+    setRequestError(null);
+    setRequesting(true);
+
+    try {
+      const response = await fetch(`/api/udhetimet/${encodeURIComponent(trip.id)}/rezervim`, {
+        method: "POST",
+        cache: "no-store",
+      });
+      const result: unknown = await response.json();
+
+      if (!response.ok) {
+        const message =
+          typeof result === "object" &&
+          result !== null &&
+          "error" in result &&
+          typeof result.error === "string"
+            ? result.error
+            : "Kërkesa për vend nuk mund të kontrollohej.";
+        throw new Error(message);
+      }
+
+      setRequestStatus("pending");
+    } catch (error) {
+      console.error("Kërkesa për vend nuk mund të kontrollohej.", error);
+      setRequestError(
+        error instanceof Error
+          ? error.message
+          : "Kërkesa për vend nuk mund të kontrollohej. Provo përsëri.",
+      );
+    } finally {
+      setRequesting(false);
+    }
+  }
 
   return (
     <section className="detail-card" aria-label={`Detajet e udhëtimit nga ${trip.nisja}`}>
@@ -64,12 +101,11 @@ export default function TripDetails({ trip }: { trip: Trip }) {
         <div className="fact"><span className="fact-label">Ora e nisjes</span><span className="fact-value">{trip.ora}</span></div>
       </div>
 
-      {trip.vende === 0 ? (
+      {trip.vende <= 0 ? (
         <div className="pending-panel" role="status" aria-live="polite">
           <div className="pending-clock"><PendingClock /></div>
-          <h2>Kërkesa u refuzua</h2>
-          <p>Nuk ka vende të lira në këtë udhëtim. Ky është vetëm një rezultat i simuluar.</p>
-          <span className="pending-status rejected-status"><i /> Simulim: E refuzuar</span>
+          <h2>Nuk ka vende të lira</h2>
+          <p>Kërkesa për vend nuk është aktive për këtë udhëtim. Asnjë kërkesë nuk u dërgua.</p>
         </div>
       ) : requestStatus !== "not-requested" ? (
         <div className="pending-panel" role="status" aria-live="polite">
@@ -105,9 +141,10 @@ export default function TripDetails({ trip }: { trip: Trip }) {
             <div className="info-item"><span className="info-check">✓</span><span>Informacioni i udhëtimit lexohet nga databaza.</span></div>
             <div className="info-item"><span className="info-check">✓</span><span>Kërkesa për vend mbetet simulim lokal dhe nuk dërgohet te shoferi.</span></div>
           </div>
-          <button className="request-button" type="button" onClick={() => setRequestStatus("pending")}>
-            Kërko një vend <span aria-hidden="true">→</span>
+          <button className="request-button" type="button" onClick={requestSeat} disabled={requesting}>
+            {requesting ? "Duke kontrolluar..." : <>Kërko një vend <span aria-hidden="true">→</span></>}
           </button>
+          {requestError && <p role="alert">{requestError}</p>}
           <p className="request-hint">Kërkesa shfaqet vetëm këtu dhe humbet kur rifreskon faqen.</p>
         </>
       )}
