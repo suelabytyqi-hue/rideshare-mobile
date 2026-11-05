@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Trip } from "@/lib/trips";
+import MeetingPoint from "@/components/MeetingPoint";
 
 function CarIcon() {
   return (
@@ -100,6 +101,8 @@ export default function TripDetails({ trip }: { trip: Trip }) {
         <div className="fact"><span className="fact-label">Vendet e lira</span><span className="fact-value">{trip.vende} vende</span></div>
         <div className="fact"><span className="fact-label">Ora e nisjes</span><span className="fact-value">{trip.ora}</span></div>
       </div>
+
+      <MeetingPoint />
 
       {trip.vende <= 0 ? (
         <div className="pending-panel" role="status" aria-live="polite">
