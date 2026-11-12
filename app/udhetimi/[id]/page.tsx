@@ -2,17 +2,27 @@ import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import TripDetails from "@/components/TripDetails";
 import { getTrip } from "@/lib/trips";
+import { getFavoriteSummary } from "@/lib/favorites";
+import { profiliIm } from "@/lib/lejet";
 
 export const dynamic = "force-dynamic";
 
 export default async function TripPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   let trip = null;
+  let favorite = { isFavorite: false, count: 0 };
+  let signedIn = false;
   let databaseError = false;
 
   try {
     trip = await getTrip(id);
-  } catch {
+    if (trip) {
+      const profile = await profiliIm();
+      signedIn = Boolean(profile);
+      if (profile) favorite = await getFavoriteSummary(profile.id, trip.id);
+    }
+  } catch (error) {
+    console.error("Detajet ose preferimet e udhëtimit nuk mund të ngarkoheshin.", error);
     databaseError = true;
   }
 
@@ -36,7 +46,12 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
               <h1>Udhëtimi yt drejt AAB</h1>
               <p>Kontrollo informacionin para se të kërkosh një vend.</p>
             </div>
-            <TripDetails trip={trip} />
+            <TripDetails
+              trip={trip}
+              signedIn={signedIn}
+              initialFavorite={favorite}
+              showFailureTest={process.env.NODE_ENV === "development"}
+            />
           </>
         ) : (
           <section className="not-found-card">
