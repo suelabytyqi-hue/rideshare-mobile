@@ -1,8 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { Trip } from "@/lib/trips";
+import type { FavoriteSummary } from "@/lib/favorites";
 import MeetingPoint from "@/components/MeetingPoint";
+
+type FavoriteStatus = "idle" | "pending" | "saved" | "error";
+
+function isFavoriteSummary(value: unknown): value is FavoriteSummary {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "isFavorite" in value &&
+    typeof value.isFavorite === "boolean" &&
+    "count" in value &&
+    typeof value.count === "number"
+  );
+}
 
 function CarIcon() {
   return (
@@ -25,10 +40,26 @@ function PendingClock() {
   );
 }
 
-export default function TripDetails({ trip }: { trip: Trip }) {
+export default function TripDetails({
+  trip,
+  signedIn,
+  initialFavorite,
+  showFailureTest,
+}: {
+  trip: Trip;
+  signedIn: boolean;
+  initialFavorite: FavoriteSummary;
+  showFailureTest: boolean;
+}) {
   const [requestStatus, setRequestStatus] = useState<"not-requested" | "pending" | "confirmed" | "rejected">("not-requested");
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
+  const [favorite, setFavorite] = useState(initialFavorite);
+  const [favoriteStatus, setFavoriteStatus] = useState<FavoriteStatus>(
+    initialFavorite.isFavorite ? "saved" : "idle",
+  );
+  const [favoriteError, setFavoriteError] = useState<string | null>(null);
+  const [simulateFavoriteFailure, setSimulateFavoriteFailure] = useState(false);
 
   async function requestSeat() {
     setRequestError(null);
@@ -62,6 +93,54 @@ export default function TripDetails({ trip }: { trip: Trip }) {
       );
     } finally {
       setRequesting(false);
+    }
+  }
+
+  async function saveTrip() {
+    if (!signedIn || favoriteStatus === "pending" || favorite.isFavorite) return;
+
+    const previousFavorite = favorite;
+    setFavorite({ isFavorite: true, count: previousFavorite.count + 1 });
+    setFavoriteStatus("pending");
+    setFavoriteError(null);
+
+    try {
+      const response = await fetch(`/api/udhetimet/${encodeURIComponent(trip.id)}/preferim`, {
+        method: "POST",
+        cache: "no-store",
+        headers: simulateFavoriteFailure ? { "x-test-failure": "true" } : undefined,
+      });
+      const result: unknown = await response.json();
+
+      if (!response.ok) {
+        const message =
+          typeof result === "object" &&
+          result !== null &&
+          "error" in result &&
+          typeof result.error === "string"
+            ? result.error
+            : "Udhëtimi nuk u ruajt. Provo përsëri.";
+        throw new Error(message);
+      }
+
+      if (
+        typeof result !== "object" ||
+        result === null ||
+        !("favorite" in result) ||
+        !isFavoriteSummary(result.favorite)
+      ) {
+        throw new Error("Përgjigjja e serverit për preferimin nuk është e vlefshme.");
+      }
+
+      setFavorite(result.favorite);
+      setFavoriteStatus("saved");
+    } catch (error) {
+      console.error("Preferimi i udhëtimit dështoi.", error);
+      setFavorite(previousFavorite);
+      setFavoriteStatus("error");
+      setFavoriteError(
+        error instanceof Error ? error.message : "Udhëtimi nuk u ruajt. Provo përsëri.",
+      );
     }
   }
 
@@ -103,6 +182,57 @@ export default function TripDetails({ trip }: { trip: Trip }) {
       </div>
 
       <MeetingPoint />
+
+      <section className="favorite-panel" aria-label="Preferimi i udhëtimit">
+        <div>
+          <strong>Të preferuarat</strong>
+          <span className="favorite-count">{favorite.count}</span>
+          <p>Preferim personal · jo rezervim</p>
+        </div>
+        {signedIn ? (
+          <div className="favorite-actions">
+            <button
+              className="favorite-button"
+              type="button"
+              onClick={saveTrip}
+              disabled={favoriteStatus === "pending" || favorite.isFavorite}
+              aria-pressed={favorite.isFavorite}
+            >
+              <span aria-hidden="true">{favorite.isFavorite ? "★" : "☆"}</span>{" "}
+              {favoriteStatus === "pending"
+                ? "Po ruhet…"
+                : favorite.isFavorite
+                  ? "I ruajtur"
+                  : favoriteStatus === "error"
+                    ? "Provo përsëri"
+                    : "Ruaj udhëtimin"}
+            </button>
+            <p className="favorite-message" role={favoriteStatus === "error" ? "alert" : "status"} aria-live="polite">
+              {favoriteStatus === "pending"
+                ? "Po presim konfirmimin e serverit."
+                : favoriteStatus === "saved"
+                  ? "U ruajt te të preferuarat."
+                  : favoriteError ?? "Nuk është te të preferuarat."}
+            </p>
+            {showFailureTest && (
+              <label className="favorite-test-toggle">
+                <input
+                  type="checkbox"
+                  checked={simulateFavoriteFailure}
+                  onChange={(event) => setSimulateFavoriteFailure(event.target.checked)}
+                  disabled={favoriteStatus === "pending"}
+                />
+                Simulo refuzimin para shkrimit (vetëm zhvillim)
+              </label>
+            )}
+          </div>
+        ) : (
+          <div className="favorite-actions">
+            <Link href="/panel" className="favorite-login">Hyr me GitHub për ta ruajtur</Link>
+            <p className="favorite-message">Preferimet lidhen me llogarinë tënde.</p>
+          </div>
+        )}
+      </section>
 
       {trip.vende <= 0 ? (
         <div className="pending-panel" role="status" aria-live="polite">
