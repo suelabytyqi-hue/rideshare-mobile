@@ -147,6 +147,19 @@ h1, h2, h3 { font-family: Manrope, "DM Sans", sans-serif; }
 .response-button { flex: 1; min-height: 42px; padding: 9px 12px; border: 1px solid transparent; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 700; }
 .confirm-button { color: #246650; background: #e7f7ef; border-color: #ccebdd; }
 .reject-button { color: #91443d; background: #fff0ee; border-color: #f4d9d5; }
+.favorite-panel { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-top: 1px solid var(--line); }
+.favorite-panel > div:first-child { display: grid; grid-template-columns: auto auto; align-items: center; justify-content: start; gap: 5px 9px; }
+.favorite-panel strong { font-size: 13px; }
+.favorite-count { min-width: 24px; padding: 3px 7px; color: #0877b9; background: #edf8ff; border-radius: 999px; font-size: 12px; font-weight: 700; text-align: center; }
+.favorite-panel p { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 11px; }
+.favorite-actions { display: grid; justify-items: end; gap: 6px; }
+.favorite-button, .favorite-login { min-height: 40px; padding: 9px 13px; color: #8a6413; background: #fff8e6; border: 1px solid #f1dfaa; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 700; }
+.favorite-button:disabled { cursor: default; opacity: .8; }
+.favorite-button span { font-size: 16px; }
+.favorite-login { display: inline-flex; align-items: center; color: #0877b9; background: #edf8ff; border-color: #d7edfb; }
+.favorite-message { color: #64788a !important; text-align: right; }
+.favorite-test-toggle { display: flex; align-items: center; gap: 5px; color: #7a5b1d; font-size: 10px; }
+.favorite-test-toggle input { margin: 0; }
 .simulation-note { margin-top: 14px; padding: 12px; color: #687b8d; background: #f6f8fa; border-radius: 11px; font-size: 11px; line-height: 1.55; }
 .not-found-card { padding: 30px; text-align: center; background: white; border: 1px solid var(--line); border-radius: 18px; }
 .not-found-card p { color: var(--muted); }
@@ -174,6 +187,8 @@ h1, h2, h3 { font-family: Manrope, "DM Sans", sans-serif; }
   .detail-card { padding: 17px; border-radius: 17px; }
   .route-box { padding: 13px; }
   .driver-response-actions { flex-direction: column; }
+  .favorite-panel { align-items: flex-start; }
+  .favorite-actions { justify-items: end; }
   .simulation-note { font-size: 10px; }
 }
 
